@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <meta name="description" content="Car wash móvil y detallado automotriz premium a domicilio en Monterrey y área metropolitana.">
+  <meta name="description" content="Car wash mÃ³vil y detallado automotriz premium a domicilio en Monterrey y Ã¡rea metropolitana.">
 
-  <title>Exclusive Clean | Car Wash Móvil Premium</title>
+  <title>Exclusive Clean | Car Wash MÃ³vil Premium</title>
 
   <script>
     (() => {
@@ -716,7 +716,7 @@
     }
 
     .service-list li::before {
-      content: "✓";
+      content: "âœ“";
       position: absolute;
       left: 0;
       color: var(--accent-text);
@@ -1175,6 +1175,16 @@
         transition: none !important;
       }
     }
+.galeria-lista,.galeria-par{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.galeria-card{padding:16px;border:1px solid var(--border);border-radius:18px;background:var(--surface);box-shadow:var(--card-shadow);min-width:0}
+.galeria-card h3{margin-bottom:12px;overflow-wrap:anywhere}
+.galeria-par img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:10px;background:var(--background)}
+.galeria-par figcaption{margin-top:8px;color:var(--accent-text);font-weight:700}
+#fotos-estado{text-align:center;color:var(--muted);margin-bottom:16px}
+#fotos-estado:empty{margin:0}
+#fotos-mas{display:block;margin:24px auto 0;padding:12px 20px;border:0;border-radius:12px;background:var(--button-bg);color:var(--button-text);font-weight:700}
+#fotos-mas[hidden]{display:none}
+@media(max-width:760px){.galeria-lista{grid-template-columns:1fr}}
   </style>
 </head>
 
@@ -1190,12 +1200,13 @@
         Exclusive Clean
       </a>
 
-      <nav aria-label="Navegación principal">
+      <nav aria-label="NavegaciÃ³n principal">
         <ul class="nav-links" id="main-navigation">
           <li><a href="#inicio">Inicio</a></li>
           <li><a href="#nosotros">Nosotros</a></li>
           <li><a href="#beneficios">Beneficios</a></li>
           <li><a href="#servicios">Servicios</a></li>
+          <li><a href="#fotos">Fotos</a></li>
           <li><a href="#agendar">Contacto</a></li>
         </ul>
       </nav>
@@ -1228,7 +1239,7 @@
         <button
           class="hamburger"
           type="button"
-          aria-label="Abrir menú"
+          aria-label="Abrir menÃº"
           aria-controls="main-navigation"
           aria-expanded="false"
         >
@@ -1248,7 +1259,7 @@
       </h1>
 
       <p>
-        Servicio premium de car wash móvil y detallado automotriz
+        Servicio premium de car wash mÃ³vil y detallado automotriz
         directamente hasta tu domicilio u oficina.
       </p>
 
@@ -1267,8 +1278,8 @@
         <div class="about-text">
           <h2>Nuestra <span>Historia</span></h2>
           <p>
-            Exclusive Clean inició en 2020 como un servicio móvil
-            enfocado en calidad y atención personalizada.
+            Exclusive Clean iniciÃ³ en 2020 como un servicio mÃ³vil
+            enfocado en calidad y atenciÃ³n personalizada.
           </p>
           <p>
             Hoy regresamos renovados y listos para ofrecer la mejor
@@ -1278,9 +1289,9 @@
 
         <div class="about-visual">
           <blockquote>
-            “Más que limpieza, es cuidado de alto nivel.”
+            â€œMÃ¡s que limpieza, es cuidado de alto nivel.â€
           </blockquote>
-          <span>Exclusive Clean — Desde 2020</span>
+          <span>Exclusive Clean â€” Desde 2020</span>
         </div>
       </div>
     </section>
@@ -1289,7 +1300,7 @@
       <h2 class="section-title">Pilares de Excelencia</h2>
       <p class="section-subtitle">
         Experiencia premium enfocada en calidad, rapidez
-        y atención profesional.
+        y atenciÃ³n profesional.
       </p>
 
       <div class="grid-features">
@@ -1311,7 +1322,7 @@
               <path d="m8 17-1 3m6-3-1 3m6-3-1 3"/>
             </svg>
           </div>
-          <h3>Garantía por Lluvia</h3>
+          <h3>GarantÃ­a por Lluvia</h3>
           <p>
             Retoque sin costo si llueve.
             <span class="restriction">Aplican restricciones.</span>
@@ -1326,7 +1337,7 @@
             </svg>
           </div>
           <h3>Reporte Digital</h3>
-          <p>Fotos del antes y después.</p>
+          <p>Fotos del antes y despuÃ©s.</p>
         </article>
 
         <article class="card-feature">
@@ -1350,7 +1361,7 @@
       <div class="grid-services">
         <article class="card-service">
           <div class="service-header">
-            <h3>Lavado Básico</h3>
+            <h3>Lavado BÃ¡sico</h3>
             <div class="price">$300</div>
           </div>
 
@@ -1359,14 +1370,14 @@
             <li>Aspirado interior</li>
             <li>Cristales</li>
             <li>Abrillantado de llantas</li>
-            <li>Aromatización básica</li>
+            <li>AromatizaciÃ³n bÃ¡sica</li>
           </ul>
 
           <a
             href="#agendar"
             class="btn-cta"
-            data-service="Lavado Básico - $300"
-            aria-label="Seleccionar Lavado Básico"
+            data-service="Lavado BÃ¡sico - $300"
+            aria-label="Seleccionar Lavado BÃ¡sico"
           >
             Seleccionar
           </a>
@@ -1384,8 +1395,8 @@
             <li>Pulido y encerado</li>
             <li>Limpieza profunda</li>
             <li>Detallado de motor</li>
-            <li>Aromatización premium</li>
-            <li>Protección interior</li>
+            <li>AromatizaciÃ³n premium</li>
+            <li>ProtecciÃ³n interior</li>
           </ul>
 
           <a
@@ -1406,9 +1417,9 @@
 
           <ul class="service-list">
             <li>Descontaminado orbital</li>
-            <li>Corrección de micro-rayas</li>
-            <li>Sellador cerámico</li>
-            <li>Protección UV</li>
+            <li>CorrecciÃ³n de micro-rayas</li>
+            <li>Sellador cerÃ¡mico</li>
+            <li>ProtecciÃ³n UV</li>
             <li>Repelente para cristales</li>
           </ul>
 
@@ -1424,6 +1435,14 @@
       </div>
     </section>
 
+    <section id="fotos" aria-labelledby="fotos-titulo">
+      <h2 class="section-title" id="fotos-titulo">Antes y despuÃ©s</h2>
+      <p class="section-subtitle">Mira los resultados de nuestros lavados y detallados a domicilio.</p>
+      <p id="fotos-estado" role="status" aria-live="polite"></p>
+      <div id="fotos-lista" class="galeria-lista"></div>
+      <button id="fotos-mas" type="button" hidden>Ver mÃ¡s trabajos</button>
+      <noscript>Activa JavaScript para ver las fotos de nuestros trabajos.</noscript>
+    </section>
     <section aria-labelledby="trust-title">
       <div class="trust-container">
         <div class="trust-icon" aria-hidden="true">
@@ -1444,9 +1463,9 @@
     <section id="agendar">
       <div class="contact-container">
         <div class="contact-info">
-          <h2>¿Listo para agendar?</h2>
+          <h2>Â¿Listo para agendar?</h2>
           <p>
-            Completa el formulario y envíanos tu solicitud por WhatsApp.
+            Completa el formulario y envÃ­anos tu solicitud por WhatsApp.
           </p>
 
           <a href="tel:+528120941710" class="info-link">
@@ -1475,7 +1494,7 @@
               <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/>
               <circle cx="12" cy="10" r="3"/>
             </svg>
-            <span>Servicio móvil en Monterrey y área metropolitana</span>
+            <span>Servicio mÃ³vil en Monterrey y Ã¡rea metropolitana</span>
           </div>
         </div>
 
@@ -1494,7 +1513,7 @@
             </div>
 
             <div class="form-group">
-              <label for="phone">Teléfono / WhatsApp</label>
+              <label for="phone">TelÃ©fono / WhatsApp</label>
               <input
                 type="tel"
                 id="phone"
@@ -1513,7 +1532,7 @@
                   <option value="" disabled selected>
                     Selecciona un servicio
                   </option>
-                  <option>Lavado Básico - $300</option>
+                  <option>Lavado BÃ¡sico - $300</option>
                   <option>Detallado Exclusive - $580</option>
                   <option>Tratamiento de Pintura - $1,450</option>
                 </select>
@@ -1533,7 +1552,7 @@
             </button>
 
             <p class="form-note" id="booking-note">
-              Se abrirá WhatsApp con tu solicitud.
+              Se abrirÃ¡ WhatsApp con tu solicitud.
               Confirmaremos la disponibilidad contigo.
             </p>
 
@@ -1593,7 +1612,7 @@
       }
     });
 
-    /* Menú móvil */
+    /* MenÃº mÃ³vil */
     const hamburger = document.querySelector(".hamburger");
     const navLinks = document.querySelector(".nav-links");
     const main = document.querySelector("main");
@@ -1608,7 +1627,7 @@
       hamburger.setAttribute("aria-expanded", String(open));
       hamburger.setAttribute(
         "aria-label",
-        open ? "Cerrar menú" : "Abrir menú"
+        open ? "Cerrar menÃº" : "Abrir menÃº"
       );
 
       navLinks.inert = !desktop.matches && !open;
@@ -1678,7 +1697,7 @@
       setMenu(false);
     });
 
-    /* Selección de servicios */
+    /* SelecciÃ³n de servicios */
     const serviceSelect = document.getElementById("service");
 
     document.querySelectorAll("[data-service]").forEach(link => {
@@ -1742,7 +1761,7 @@
         digits.length >= 10 &&
         digits.length <= 15
           ? ""
-          : "Escribe un teléfono válido de 10 a 15 dígitos."
+          : "Escribe un telÃ©fono vÃ¡lido de 10 a 15 dÃ­gitos."
       );
 
       if (!form.reportValidity()) return;
@@ -1753,7 +1772,7 @@
         "NUEVA SOLICITUD DE CITA - EXCLUSIVE CLEAN",
         "",
         `Nombre: ${nombre}`,
-        `Teléfono: ${telefono}`,
+        `TelÃ©fono: ${telefono}`,
         `Servicio: ${serviceSelect.value}`,
         `Fecha ideal: ${day}/${month}/${year}`
       ].join("\n");
@@ -1768,15 +1787,119 @@
       fallback.textContent = "Abrir WhatsApp";
 
       bookingStatus.replaceChildren(
-        document.createTextNode("Si no se abrió automáticamente: "),
+        document.createTextNode("Si no se abriÃ³ automÃ¡ticamente: "),
         fallback,
         document.createTextNode(
-          ". Tu cita queda pendiente de confirmación."
+          ". Tu cita queda pendiente de confirmaciÃ³n."
         )
       );
 
       window.open(url, "_blank", "noopener,noreferrer");
     });
+  </script>
+  <script type="module">
+    const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_TU_CLAVE";
+    const lista = document.getElementById("fotos-lista");
+    const estado = document.getElementById("fotos-estado");
+    const boton = document.getElementById("fotos-mas");
+    const tipos = [["antes.jpg", "Antes"], ["despues.jpg", "DespuÃ©s"]];
+    const porPagina = 6;
+    let db;
+    let desde = 0;
+
+    function tarjeta(trabajo, urls) {
+      const articulo = document.createElement("article");
+      articulo.className = "galeria-card";
+      const titulo = document.createElement("h3");
+      titulo.textContent = trabajo.titulo;
+      const par = document.createElement("div");
+      par.className = "galeria-par";
+
+      for (const [archivo, etiqueta] of tipos) {
+        const figura = document.createElement("figure");
+        const imagen = document.createElement("img");
+        imagen.alt = etiqueta + " del lavado: " + trabajo.titulo;
+        imagen.decoding = "async";
+        imagen.src = urls.get(trabajo.id + "/" + archivo);
+        const pie = document.createElement("figcaption");
+        pie.textContent = etiqueta;
+        figura.append(imagen, pie);
+        par.append(figura);
+      }
+
+      articulo.append(titulo, par);
+      return articulo;
+    }
+
+    async function cargarFotos() {
+      boton.disabled = true;
+      estado.textContent = "Cargando fotosâ€¦";
+      try {
+        if (!db) {
+          if (SUPABASE_URL.includes("TU-PROYECTO") || SUPABASE_KEY.includes("TU_CLAVE")) {
+            throw new Error("Configura la URL y la clave Publishable en index.html.");
+          }
+          const { createClient } = await import(
+            "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm"
+          );
+          db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+          });
+        }
+
+        const { data: filas, error } = await db.from("autolavado_trabajos")
+          .select("id,titulo")
+          .eq("publicado", true)
+          .order("creado_en", { ascending: false })
+          .order("id", { ascending: false })
+          .range(desde, desde + porPagina);
+        if (error) throw error;
+
+        const trabajos = filas.slice(0, porPagina);
+        if (!trabajos.length) {
+          estado.textContent = desde
+            ? "Ya viste todos los trabajos disponibles."
+            : "PrÃ³ximamente agregaremos fotos de nuestros trabajos.";
+          boton.hidden = true;
+          return;
+        }
+
+        const rutas = trabajos.flatMap(({ id }) =>
+          tipos.map(([archivo]) => id + "/" + archivo)
+        );
+        const { data: enlaces, error: errorEnlaces } = await db.storage
+          .from("autolavado-fotos").createSignedUrls(rutas, 600);
+        if (errorEnlaces) throw errorEnlaces;
+
+        const urls = new Map(enlaces.filter(({ signedUrl }) => signedUrl)
+          .map(({ path, signedUrl }) => [path, signedUrl]));
+        const tarjetas = document.createDocumentFragment();
+        for (const trabajo of trabajos) {
+          if (tipos.every(([archivo]) => urls.has(trabajo.id + "/" + archivo))) {
+            tarjetas.append(tarjeta(trabajo, urls));
+          }
+        }
+
+        estado.textContent = tarjetas.childElementCount < trabajos.length
+          ? "Algunas fotos no estÃ¡n disponibles en este momento."
+          : "";
+        lista.append(tarjetas);
+        desde += trabajos.length;
+        boton.hidden = filas.length <= porPagina;
+        boton.textContent = "Ver mÃ¡s trabajos";
+      } catch (error) {
+        console.error("Error en la galerÃ­a:", error);
+        estado.textContent = "No pudimos cargar las fotos en este momento.";
+        boton.hidden = false;
+        boton.textContent = "Reintentar";
+      } finally {
+        boton.disabled = false;
+      }
+    }
+
+    boton.addEventListener("click", cargarFotos);
+    cargarFotos();
   </script>
 </body>
 </html>
