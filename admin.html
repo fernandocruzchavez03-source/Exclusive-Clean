@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de fotos | Autolavado</title>
+  <style>
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      background: #f0f5fa;
+      color: #172b40;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+
+    main {
+      width: min(100% - 2rem, 42rem);
+      margin: 2rem auto;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    section, article {
+      background: white;
+      border: 1px solid #cdd9e5;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    article { background: #f7fafc; }
+
+    form, label {
+      display: grid;
+      gap: .5rem;
+    }
+
+    form { margin-bottom: 1rem; }
+    button, input { font: inherit; }
+
+    input, button {
+      min-height: 44px;
+      max-width: 100%;
+      border-radius: .5rem;
+      padding: .55rem .75rem;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #74879a;
+      background: white;
+    }
+
+    button {
+      border: 0;
+      background: #0755a0;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #e3ecf5;
+      color: #172b40;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: default;
+    }
+
+    header, .acciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #mensaje { overflow-wrap: anywhere; }
+    [data-error="true"] { color: #a12721; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Panel de fotos</h1>
+      <button id="salir" class="secondary" type="button" hidden>
+        Cerrar sesión
+      </button>
+    </header>
+
+    <p id="mensaje" role="status" aria-live="polite">Cargando panel…</p>
+
+    <section id="acceso" hidden>
+      <h2>Inicia sesión</h2>
+      <form id="login">
+        <label>
+          Correo
+          <input name="email" type="email" autocomplete="username" required>
+        </label>
+        <label>
+          Contraseña
+          <input name="password" type="password"
+                 autocomplete="current-password" required>
+        </label>
+        <button type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <div id="panel" hidden>
+      <section>
+        <h2>Nuevo trabajo</h2>
+        <form id="nuevo">
+          <label>
+            Título
+            <input name="titulo" maxlength="100" required
+                   placeholder="Ej. Lavado interior y exterior">
+          </label>
+          <button type="submit">Crear borrador</button>
+        </form>
+        <p>Abre el borrador y agrega las dos fotos. Puedes continuar más tarde.</p>
+      </section>
+
+      <section>
+        <div class="acciones">
+          <h2>Trabajos</h2>
+          <button id="actualizar" class="secondary" type="button">Actualizar lista</button>
+        </div>
+        <div id="trabajos"></div>
+        <button id="mas" class="secondary" type="button" hidden>Ver más trabajos</button>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    // Sustituye estos dos valores por los de tu proyecto.
+    const SUPABASE_URL = 'https://qmugvqcdxcfjfcbzgcdy.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_rIMAan9OLpuCvDWDyVIpXg_g8AQ-ipy';
+
+    const tabla = 'autolavado_trabajos';
+    const limite = 20;
+    const maxBytes = 5 * 1024 * 1024;
+    const $ = (id) => document.getElementById(id);
+
+    let db;
+    let fotos;
+    let pagina = 0;
+
+    function mensaje(texto, esError = false) {
+      $('mensaje').textContent = texto;
+      $('mensaje').dataset.error = String(esError);
+    }
+
+    function resultado({ data, error }) {
+      if (error) throw error;
+      return data;
+    }
+
+    async function ejecutar(boton, texto, tarea) {
+      if (boton.disabled) return;
+      boton.disabled = true;
+      mensaje(texto);
+
+      try {
+        await tarea();
+      } catch (error) {
+        mensaje(error.message || 'Ocurrió un error. Intenta de nuevo.', true);
+      } finally {
+        boton.disabled = false;
+      }
+    }
+
+    function elemento(etiqueta, texto) {
+      const nodo = document.createElement(etiqueta);
+      if (texto) nodo.textContent = texto;
+      return nodo;
+    }
+
+    function boton(texto) {
+      const nodo = elemento('button', texto);
+      nodo.type = 'button';
+      return nodo;
+    }
+
+    async function mostrarSesion(sesion) {
+      $('panel').hidden = true;
+      $('acceso').hidden = Boolean(sesion);
+      $('salir').hidden = !sesion;
+      $('trabajos').replaceChildren();
+      $('mas').hidden = true;
+
+      if (!sesion) {
+        mensaje('Ingresa con tu cuenta de administrador.');
+        return;
+      }
+
+      const admin = resultado(await db.from('autolavado_admins')
+        .select('user_id')
+        .eq('user_id', sesion.user.id)
+        .maybeSingle());
+
+      if (!admin) {
+        mensaje('Esta cuenta no tiene acceso al panel.', true);
+        return;
+      }
+
+      $('panel').hidden = false;
+      await cargarTrabajos();
+      mensaje('Sesión iniciada.');
+    }
+
+    async function cargarTrabajos({ agregar = false } = {}) {
+      const siguientePagina = agregar ? pagina + 1 : 0;
+      const inicio = siguientePagina * limite;
+      const filas = resultado(await db.from(tabla)
+        .select('id,titulo,publicado')
+        .order('creado_en', { ascending: false })
+        .order('id', { ascending: false })
+        .range(inicio, inicio + limite - 1));
+
+      pagina = siguientePagina;
+      if (!agregar) $('trabajos').replaceChildren();
+      if (!agregar && filas.length === 0) {
+        $('trabajos').append(elemento('p', 'Todavía no hay trabajos.'));
+      }
+
+      for (const trabajo of filas) {
+        $('trabajos').append(tarjeta(trabajo));
+      }
+
+      $('mas').hidden = filas.length < limite;
+    }
+
+    function tarjeta(trabajo) {
+      const tarjeta = elemento('article');
+      const estado = trabajo.publicado ? 'Publicado' : 'Borrador u oculto';
+      const abrir = boton('Abrir trabajo');
+      const detalle = elemento('div');
+      detalle.hidden = true;
+
+      tarjeta.append(elemento('h3', trabajo.titulo), elemento('p', estado), abrir, detalle);
+
+      abrir.addEventListener('click', () => ejecutar(abrir, 'Cargando fotos…', async () => {
+        await cargarDetalle(trabajo, detalle);
+        detalle.hidden = false;
+        abrir.textContent = 'Actualizar fotos';
+        mensaje(`Trabajo abierto: ${trabajo.titulo}`);
+      }));
+
+      return tarjeta;
+    }
+
+    async function cargarDetalle(trabajo, detalle) {
+      const archivos = resultado(await fotos.list(trabajo.id));
+      const nombres = new Set(archivos.map((archivo) => archivo.name));
+
+      detalle.replaceChildren();
+
+      for (const [etiqueta, nombre] of [
+        ['Antes', 'antes.jpg'],
+        ['Después', 'despues.jpg']
+      ]) {
+        if (nombres.has(nombre)) {
+          detalle.append(elemento('p', `${etiqueta}: foto guardada.`));
+        } else if (!trabajo.publicado) {
+          detalle.append(formularioFoto(trabajo, detalle, etiqueta, nombre));
+        }
+      }
+
+      if (!trabajo.publicado && nombres.size === 0) {
+        detalle.append(elemento('p', 'Selecciona una imagen JPG de hasta 5 MB por foto.'));
+      }
+
+      const publicar = !trabajo.publicado;
+      const cambiar = boton(publicar ? 'Publicar trabajo' : 'Ocultar trabajo');
+      cambiar.disabled = publicar && !(nombres.has('antes.jpg') && nombres.has('despues.jpg'));
+
+      cambiar.addEventListener('click', () => ejecutar(cambiar, 'Guardando cambio…', async () => {
+        resultado(await db.from(tabla)
+          .update({ publicado: publicar })
+          .eq('id', trabajo.id)
+          .select('id')
+          .single());
+
+        mensaje(publicar ? 'Trabajo publicado.' : 'Trabajo ocultado.');
+        await cargarTrabajos();
+      }));
+
+      detalle.append(cambiar);
+    }
+
+    function formularioFoto(trabajo, detalle, etiqueta, nombre) {
+      const form = elemento('form');
+      const label = elemento('label', `Foto ${etiqueta}`);
+      const input = elemento('input');
+      const subir = elemento('button', `Subir foto ${etiqueta}`);
+
+      input.type = 'file';
+      input.accept = 'image/jpeg,.jpg,.jpeg';
+      input.required = true;
+      subir.type = 'submit';
+
+      label.append(input);
+      form.append(label, subir);
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        ejecutar(subir, `Subiendo foto ${etiqueta}…`, async () => {
+          const archivo = input.files[0];
+          if (!archivo || archivo.type !== 'image/jpeg') {
+            throw new Error('Selecciona una imagen JPG. Si está en HEIC, conviértela primero.');
+          }
+          if (archivo.size > maxBytes) {
+            throw new Error('La foto supera los 5 MB. Reduce su tamaño y vuelve a intentarlo.');
+          }
+
+          resultado(await fotos.upload(`${trabajo.id}/${nombre}`, archivo, {
+            contentType: 'image/jpeg',
+            upsert: false
+          }));
+
+          await cargarDetalle(trabajo, detalle);
+          mensaje(`Foto ${etiqueta} guardada.`);
+        });
+      });
+
+      return form;
+    }
+
+    $('login').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const datos = new FormData(form);
+
+      ejecutar(event.submitter, 'Iniciando sesión…', async () => {
+        const { session } = resultado(await db.auth.signInWithPassword({
+          email: String(datos.get('email')).trim(),
+          password: String(datos.get('password'))
+        }));
+
+        form.reset();
+        await mostrarSesion(session);
+      });
+    });
+
+    $('salir').addEventListener('click', () => ejecutar(
+      $('salir'), 'Cerrando sesión…', async () => {
+        resultado(await db.auth.signOut({ scope: 'local' }));
+        $('nuevo').reset();
+        await mostrarSesion(null);
+      }
+    ));
+
+    $('nuevo').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const titulo = String(new FormData(form).get('titulo')).trim();
+
+      ejecutar(event.submitter, 'Creando borrador…', async () => {
+        if (!titulo) throw new Error('Escribe un título para el trabajo.');
+
+        resultado(await db.from(tabla).insert({ titulo }));
+        form.reset();
+        mensaje('Borrador creado. Abre el primer trabajo para subir las fotos.');
+        await cargarTrabajos();
+      });
+    });
+
+    $('actualizar').addEventListener('click', () => ejecutar(
+      $('actualizar'), 'Actualizando lista…', async () => {
+        await cargarTrabajos();
+        mensaje('Lista actualizada.');
+      }
+    ));
+
+    $('mas').addEventListener('click', () => ejecutar(
+      $('mas'), 'Cargando más trabajos…', async () => {
+        await cargarTrabajos({ agregar: true });
+        mensaje('Lista actualizada.');
+      }
+    ));
+
+    try {
+      if (SUPABASE_URL.includes('TU-PROYECTO') || SUPABASE_KEY.includes('TU_CLAVE')) {
+        throw new Error('Edita admin.html y coloca la URL y la clave pública de Supabase.');
+      }
+
+      const { createClient } = await import(
+        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm'
+      );
+
+      db = createClient(SUPABASE_URL, SUPABASE_KEY);
+      fotos = db.storage.from('autolavado-fotos');
+
+      const { session } = resultado(await db.auth.getSession());
+      await mostrarSesion(session);
+    } catch (error) {
+      mensaje(error.message || 'No se pudo cargar el panel.', true);
+    }
+  </script>
+</body>
+</html>
