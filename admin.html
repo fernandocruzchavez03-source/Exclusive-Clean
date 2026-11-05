@@ -81,12 +81,27 @@
 
     #mensaje { overflow-wrap: anywhere; }
     [data-error="true"] { color: #a12721; }
+    body { background: #101220; color: #f8f8fc; color-scheme: dark; }
+    h1 { font-size: clamp(1.65rem, 5vw, 2.5rem); margin-bottom: 0; }
+    .marca { color: #fed505; font-weight: 800; margin-bottom: .25rem; }
+    section, article { background: #1c1e30; border-color: #42465b; padding: clamp(1rem, 3vw, 1.5rem); }
+    article { background: #25283b; }
+    input { background: #101220; color: #fff; }
+    button { background: #fed505; color: #101220; min-height: 48px; }
+    button.secondary { background: #373b52; color: #fff; }
+    [data-error="true"] { color: #ffb3ad; }
+    :focus-visible { outline: 2px solid #fed505; outline-offset: 3px; }
+    .par { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .par label { min-width: 0; border: 1px dashed #85899e; border-radius: .75rem; padding: .75rem; }
+    .par img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #101220; border-radius: .5rem; }
+    @media (max-width: 560px) { .par { grid-template-columns: 1fr; } }
+
   </style>
 </head>
 <body>
   <main>
     <header>
-      <h1>Panel de fotos</h1>
+      <div><p class="marca">Exclusive Clean</p><h1>Panel de fotos</h1></div>
       <button id="salir" class="secondary" type="button" hidden>
         Cerrar sesión
       </button>
@@ -119,9 +134,15 @@
             <input name="titulo" maxlength="100" required
                    placeholder="Ej. Lavado interior y exterior">
           </label>
-          <button type="submit">Crear borrador</button>
+          <div class="par">
+            <label>Foto Antes<input id="lote-antes" type="file" accept="image/*"><img alt="Vista previa Antes" hidden></label>
+            <label>Foto Después<input id="lote-despues" type="file" accept="image/*"><img alt="Vista previa Después" hidden></label>
+          </div>
+          <p>Elige las fotos de tu galería o tómalas con la cámara. Ajustamos el tamaño al subirlas.</p>
+          <button type="submit" value="publicar">Subir y publicar</button>
+          <button type="submit" class="secondary">Guardar borrador</button>
         </form>
-        <p>Abre el borrador y agrega las dos fotos. Puedes continuar más tarde.</p>
+
       </section>
 
       <section>
@@ -299,7 +320,7 @@
       const subir = elemento('button', `Subir foto ${etiqueta}`);
 
       input.type = 'file';
-      input.accept = 'image/jpeg,.jpg,.jpeg';
+      input.accept = 'image/*';
       input.required = true;
       subir.type = 'submit';
 
@@ -311,14 +332,9 @@
 
         ejecutar(subir, `Subiendo foto ${etiqueta}…`, async () => {
           const archivo = input.files[0];
-          if (!archivo || archivo.type !== 'image/jpeg') {
-            throw new Error('Selecciona una imagen JPG. Si está en HEIC, conviértela primero.');
-          }
-          if (archivo.size > maxBytes) {
-            throw new Error('La foto supera los 5 MB. Reduce su tamaño y vuelve a intentarlo.');
-          }
-
-          resultado(await fotos.upload(`${trabajo.id}/${nombre}`, archivo, {
+          if (!archivo) throw new Error('Selecciona una foto.');
+          const jpg = await prepararFoto(archivo);
+          resultado(await fotos.upload(`${trabajo.id}/${nombre}`, jpg, {
             contentType: 'image/jpeg',
             upsert: false
           }));
@@ -350,25 +366,109 @@
     $('salir').addEventListener('click', () => ejecutar(
       $('salir'), 'Cerrando sesión…', async () => {
         resultado(await db.auth.signOut({ scope: 'local' }));
-        $('nuevo').reset();
+        limpiarNuevo();
         await mostrarSesion(null);
       }
     ));
+
+    const campos = [
+      [$('lote-antes'), 'antes.jpg', 'Antes'],
+      [$('lote-despues'), 'despues.jpg', 'Después']
+    ];
+
+    function vista(input) {
+      const imagen = input.nextElementSibling;
+      if (imagen.src.startsWith('blob:')) URL.revokeObjectURL(imagen.src);
+      imagen.removeAttribute('src');
+      imagen.hidden = !input.files.length;
+      if (!imagen.hidden) imagen.src = URL.createObjectURL(input.files[0]);
+    }
+
+    for (const [input] of campos) {
+      input.addEventListener('change', () => vista(input));
+    }
+
+    function limpiarNuevo() {
+      $('nuevo').reset();
+      for (const [input] of campos) vista(input);
+    }
+
+    async function prepararFoto(archivo) {
+      const url = URL.createObjectURL(archivo);
+      try {
+        const imagen = new Image();
+        imagen.src = url;
+        await imagen.decode().catch(() => {
+          throw new Error('Tu navegador no pudo abrir la foto. Elige una copia JPG o PNG.');
+        });
+        const escala = Math.min(1, 1600 / Math.max(imagen.naturalWidth, imagen.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(imagen.naturalWidth * escala));
+        canvas.height = Math.max(1, Math.round(imagen.naturalHeight * escala));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(imagen, 0, 0, canvas.width, canvas.height);
+        const jpg = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .85));
+        if (!jpg || jpg.size > maxBytes) throw new Error('No se pudo ajustar el tamaño de la foto.');
+        return jpg;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
 
     $('nuevo').addEventListener('submit', (event) => {
       event.preventDefault();
       const form = event.currentTarget;
       const titulo = String(new FormData(form).get('titulo')).trim();
+      const publicar = event.submitter.value === 'publicar';
+      const elegidas = campos.map(([input, nombre, etiqueta]) => ({
+        archivo: input.files[0], nombre, etiqueta
+      }));
 
-      ejecutar(event.submitter, 'Creando borrador…', async () => {
+      ejecutar(event.submitter, 'Preparando trabajo…', async () => {
         if (!titulo) throw new Error('Escribe un título para el trabajo.');
+        if (publicar && elegidas.some(({ archivo }) => !archivo)) {
+          throw new Error('Elige las dos fotos o pulsa Guardar borrador.');
+        }
 
-        resultado(await db.from(tabla).insert({ titulo }));
-        form.reset();
-        mensaje('Borrador creado. Abre el primer trabajo para subir las fotos.');
-        await cargarTrabajos();
+        form.inert = true;
+        $('salir').disabled = true;
+        try {
+          const preparadas = [];
+          for (const foto of elegidas) {
+            if (foto.archivo) preparadas.push({ ...foto, jpg: await prepararFoto(foto.archivo) });
+          }
+
+          const { id } = resultado(await db.from(tabla).insert({ titulo }).select('id').single());
+          try {
+            for (const { nombre, etiqueta, jpg } of preparadas) {
+              mensaje('Subiendo foto ' + etiqueta + '…');
+              resultado(await fotos.upload(id + '/' + nombre, jpg, {
+                contentType: 'image/jpeg', upsert: false
+              }));
+            }
+            if (publicar) {
+              mensaje('Publicando trabajo…');
+              resultado(await db.from(tabla).update({ publicado: true }).eq('id', id)
+                .select('id').single());
+            }
+          } catch (error) {
+            limpiarNuevo();
+            await cargarTrabajos().catch(console.error);
+            throw new Error('El trabajo quedó guardado. Ábrelo en la lista para continuar. ' + error.message);
+          }
+
+          limpiarNuevo();
+          await cargarTrabajos().catch(console.error);
+          mensaje(publicar ? 'Trabajo publicado en la galería.' : 'Borrador guardado.');
+        } finally {
+          form.inert = false;
+          $('salir').disabled = false;
+        }
       });
     });
+
 
     $('actualizar').addEventListener('click', () => ejecutar(
       $('actualizar'), 'Actualizando lista…', async () => {
