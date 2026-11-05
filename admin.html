@@ -96,6 +96,9 @@
     .par img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #101220; border-radius: .5rem; }
     @media (max-width: 560px) { .par { grid-template-columns: 1fr; } }
 
+    textarea { width: 100%; font: inherit; padding: .65rem; border-radius: .65rem; border: 1px solid #85899e; background: #101220; color: #fff; resize: vertical; }
+    button.peligro { background: #532832; color: #ffe4e7; margin: .5rem; }
+    #trabajos article > div { margin-top: .75rem; }
   </style>
 </head>
 <body>
@@ -133,6 +136,11 @@
             Título
             <input name="titulo" maxlength="100" required
                    placeholder="Ej. Lavado interior y exterior">
+          </label>
+          <label>
+            Nota privada (opcional)
+            <textarea id="nueva-nota" rows="3" maxlength="2000"
+              placeholder="Ej. Mazda 3 blanco · 4 de noviembre · lavado interior"></textarea>
           </label>
           <div class="par">
             <label>Foto Antes<input id="lote-antes" type="file" accept="image/*"><img alt="Vista previa Antes" hidden></label>
@@ -237,7 +245,7 @@
       const siguientePagina = agregar ? pagina + 1 : 0;
       const inicio = siguientePagina * limite;
       const filas = resultado(await db.from(tabla)
-        .select('id,titulo,publicado')
+        .select('id,titulo,publicado,eliminando')
         .order('creado_en', { ascending: false })
         .order('id', { ascending: false })
         .range(inicio, inicio + limite - 1));
@@ -255,14 +263,76 @@
       $('mas').hidden = filas.length < limite;
     }
 
+    const tablaNotas = 'autolavado_notas';
+
+    async function guardarNota(id, nota) {
+      resultado(await db.from(tablaNotas).upsert({ trabajo_id: id, nota }));
+    }
+
+    async function formularioNota(id) {
+      const registro = resultado(await db.from(tablaNotas).select('nota')
+        .eq('trabajo_id', id).maybeSingle());
+      const form = elemento('form');
+      const label = elemento('label', 'Nota privada');
+      const campo = elemento('textarea');
+      campo.rows = 3;
+      campo.maxLength = 2000;
+      campo.placeholder = 'Ej. Mazda 3 blanco · 4 de noviembre · lavado interior';
+      campo.value = registro?.nota ?? '';
+      const guardar = elemento('button', 'Guardar nota');
+      guardar.type = 'submit';
+      guardar.className = 'secondary';
+      label.append(campo);
+      form.append(label, guardar);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        ejecutar(guardar, 'Guardando nota…', async () => {
+          await guardarNota(id, campo.value.trim());
+          mensaje('Nota privada guardada.');
+        });
+      });
+      return form;
+    }
+
+    function botonBorrar(trabajo) {
+      const borrar = boton(trabajo.eliminando ? 'Reintentar borrado' : 'Borrar trabajo');
+      borrar.className = 'peligro';
+      borrar.addEventListener('click', () => {
+        if (!confirm('¿Borrar este trabajo, sus fotos y su nota privada? Esta acción es permanente.')) return;
+        ejecutar(borrar, 'Borrando trabajo y fotos…', async () => {
+          resultado(await db.from(tabla).update({ publicado: false, eliminando: true })
+            .eq('id', trabajo.id).select('id').single());
+
+          try {
+            resultado(await fotos.remove([
+              trabajo.id + '/antes.jpg',
+              trabajo.id + '/despues.jpg'
+            ]));
+            resultado(await db.from(tabla).delete().eq('id', trabajo.id)
+              .select('id').single());
+          } catch (error) {
+            await cargarTrabajos().catch(console.error);
+            throw new Error('El trabajo quedó oculto. Pulsa Reintentar borrado. ' + error.message);
+          }
+
+          await cargarTrabajos().catch(console.error);
+          mensaje('Trabajo, fotos y nota eliminados.');
+        });
+      });
+      return borrar;
+    }
+
+
     function tarjeta(trabajo) {
       const tarjeta = elemento('article');
-      const estado = trabajo.publicado ? 'Publicado' : 'Borrador u oculto';
+      const estado = trabajo.eliminando ? 'Borrado pendiente' : (trabajo.publicado ? 'Publicado' : 'Borrador u oculto');
       const abrir = boton('Abrir trabajo');
       const detalle = elemento('div');
       detalle.hidden = true;
 
-      tarjeta.append(elemento('h3', trabajo.titulo), elemento('p', estado), abrir, detalle);
+      tarjeta.append(elemento('h3', trabajo.titulo), elemento('p', estado));
+      if (!trabajo.eliminando) tarjeta.append(abrir);
+      tarjeta.append(botonBorrar(trabajo), detalle);
 
       abrir.addEventListener('click', () => ejecutar(abrir, 'Cargando fotos…', async () => {
         await cargarDetalle(trabajo, detalle);
@@ -274,11 +344,42 @@
       return tarjeta;
     }
 
+    function formularioTitulo(trabajo) {
+      const form = elemento('form');
+      const label = elemento('label', 'Título público');
+      const campo = elemento('input');
+      campo.value = trabajo.titulo;
+      campo.maxLength = 100;
+      campo.required = true;
+      const guardar = elemento('button', 'Guardar título');
+      guardar.type = 'submit';
+      guardar.className = 'secondary';
+      label.append(campo);
+      form.append(label, guardar);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        ejecutar(guardar, 'Guardando título…', async () => {
+          const titulo = campo.value.trim();
+          if (!titulo) throw new Error('Escribe un título.');
+          resultado(await db.from(tabla).update({ titulo }).eq('id', trabajo.id)
+            .select('id').single());
+          trabajo.titulo = titulo;
+          form.closest('article').querySelector('h3').textContent = titulo;
+          mensaje('Título actualizado.');
+        });
+      });
+      return form;
+    }
+
+
     async function cargarDetalle(trabajo, detalle) {
       const archivos = resultado(await fotos.list(trabajo.id));
       const nombres = new Set(archivos.map((archivo) => archivo.name));
 
-      detalle.replaceChildren();
+      detalle.replaceChildren(formularioTitulo(trabajo), await formularioNota(trabajo.id));
+      if (trabajo.publicado) {
+        detalle.append(elemento('p', 'Para reemplazar una foto, oculta el trabajo y vuelve a abrirlo.'));
+      }
 
       for (const [etiqueta, nombre] of [
         ['Antes', 'antes.jpg'],
@@ -286,8 +387,9 @@
       ]) {
         if (nombres.has(nombre)) {
           detalle.append(elemento('p', `${etiqueta}: foto guardada.`));
-        } else if (!trabajo.publicado) {
-          detalle.append(formularioFoto(trabajo, detalle, etiqueta, nombre));
+        }
+        if (!trabajo.publicado) {
+          detalle.append(formularioFoto(trabajo, detalle, etiqueta, nombre, nombres.has(nombre)));
         }
       }
 
@@ -313,11 +415,11 @@
       detalle.append(cambiar);
     }
 
-    function formularioFoto(trabajo, detalle, etiqueta, nombre) {
+    function formularioFoto(trabajo, detalle, etiqueta, nombre, reemplazar) {
       const form = elemento('form');
       const label = elemento('label', `Foto ${etiqueta}`);
       const input = elemento('input');
-      const subir = elemento('button', `Subir foto ${etiqueta}`);
+      const subir = elemento('button', `${reemplazar ? 'Reemplazar' : 'Subir'} foto ${etiqueta}`);
 
       input.type = 'file';
       input.accept = 'image/*';
@@ -336,7 +438,8 @@
           const jpg = await prepararFoto(archivo);
           resultado(await fotos.upload(`${trabajo.id}/${nombre}`, jpg, {
             contentType: 'image/jpeg',
-            upsert: false
+            upsert: reemplazar,
+            cacheControl: '60'
           }));
 
           await cargarDetalle(trabajo, detalle);
@@ -422,6 +525,7 @@
       const form = event.currentTarget;
       const titulo = String(new FormData(form).get('titulo')).trim();
       const publicar = event.submitter.value === 'publicar';
+      const nota = $('nueva-nota').value.trim();
       const elegidas = campos.map(([input, nombre, etiqueta]) => ({
         archivo: input.files[0], nombre, etiqueta
       }));
@@ -442,6 +546,7 @@
 
           const { id } = resultado(await db.from(tabla).insert({ titulo }).select('id').single());
           try {
+            if (nota) await guardarNota(id, nota);
             for (const { nombre, etiqueta, jpg } of preparadas) {
               mensaje('Subiendo foto ' + etiqueta + '…');
               resultado(await fotos.upload(id + '/' + nombre, jpg, {
